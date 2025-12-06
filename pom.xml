@@ -17,6 +17,7 @@
         <java.version>17</java.version>
         <spring.boot.version>3.3.3</spring.boot.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
+        <flyway.version>10.21.0</flyway.version>
     </properties>
 
     <dependencyManagement>
@@ -51,13 +52,16 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- H2 for testing-->
+        <!-- Flyway -->
         <dependency>
-            <groupId>com.h2database</groupId>
-            <artifactId>h2</artifactId>
-            <scope>runtime</scope>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-database-postgresql</artifactId>
+        </dependency>
 
         <!-- Validation -->
         <dependency>
