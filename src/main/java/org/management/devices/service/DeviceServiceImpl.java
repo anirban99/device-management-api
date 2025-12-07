@@ -2,6 +2,7 @@ package org.management.devices.service;
 
 import lombok.RequiredArgsConstructor;
 import org.management.devices.domain.Device;
+import org.management.devices.domain.DeviceState;
 import org.management.devices.dto.DeviceCreateRequest;
 import org.management.devices.dto.DeviceResponse;
 import org.management.devices.exception.DeviceNotFoundException;
@@ -36,6 +37,23 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     public List<DeviceResponse> getAll() {
         return deviceRepository.findAll().stream().map(mapper::toResponse).toList();
+    }
+
+    @Override
+    public List<DeviceResponse> getByBrand(String brand) {
+        return deviceRepository.findByBrand(brand).stream().map(mapper::toResponse).toList();
+    }
+
+    @Override
+    public List<DeviceResponse> getByState(String state) {
+        DeviceState deviceState = DeviceState.valueOf(state.trim().toUpperCase());
+        return deviceRepository.findByState(deviceState).stream().map(mapper::toResponse).toList();
+    }
+
+    @Override
+    public List<DeviceResponse> getByBrandAndState(String brand, String state) {
+        DeviceState deviceState = DeviceState.valueOf(state.trim().toUpperCase());
+        return deviceRepository.findByBrandAndState(brand, deviceState).stream().map(mapper::toResponse).toList();
     }
 
     private Device find(UUID id) {

@@ -37,6 +37,13 @@ public class DeviceControllerImpl implements DeviceController { // <-- Implement
     @GetMapping
     public ResponseEntity<List<DeviceResponse>> getAll(@RequestParam(required = false) String brand,
                                                        @RequestParam(required = false) String state) {
+        if (brand != null && !brand.isEmpty() && state != null && !state.isEmpty()) {
+            return ResponseEntity.ok(deviceService.getByBrandAndState(brand, state));
+        }
+
+        if (brand != null && !brand.isEmpty()) return ResponseEntity.ok(deviceService.getByBrand(brand));
+        if (state != null && !state.isEmpty()) return ResponseEntity.ok(deviceService.getByState(state));
+
         return ResponseEntity.ok(deviceService.getAll());
     }
 }

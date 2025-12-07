@@ -12,4 +12,10 @@ public interface DeviceService {
     DeviceResponse getById(UUID id);
 
     List<DeviceResponse> getAll();
+
+    List<DeviceResponse> getByBrand(String brand);
+
+    List<DeviceResponse> getByState(String state);
+
+    List<DeviceResponse> getByBrandAndState(String brand, String state);
 }

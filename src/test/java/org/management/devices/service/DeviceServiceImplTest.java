@@ -278,7 +278,227 @@ class DeviceServiceImplTest {
         verify(mapper).toResponse(deviceThree);
     }
 
-    // Helper methods
+    @Test
+    void getByBrand_ShouldReturnEmptyList_WhenNoBrandDevicesExist() {
+        // Given
+        when(deviceRepository.findByBrand(DEVICE_BRAND)).thenReturn(Collections.emptyList());
+
+        // When
+        List<DeviceResponse> result = deviceService.getByBrand(DEVICE_BRAND);
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(deviceRepository, times(1)).findByBrand(DEVICE_BRAND);
+        verify(mapper, never()).toResponse(any());
+    }
+
+    @Test
+    void getByBrand_ShouldReturnMultipleDevices_WhenMultipleBrandDevicesExist() {
+        // Given
+        UUID deviceIdTwo = UUID.randomUUID();
+        Device appleDeviceTwo = createAppleDevice(deviceIdTwo);
+        DeviceResponse responseTwo = createAppleDeviceResponse(deviceIdTwo);
+
+        List<Device> devices = List.of(savedDevice, appleDeviceTwo);
+        when(deviceRepository.findByBrand(DEVICE_BRAND)).thenReturn(devices);
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+        when(mapper.toResponse(appleDeviceTwo)).thenReturn(responseTwo);
+
+        // When
+        List<DeviceResponse> result = deviceService.getByBrand(DEVICE_BRAND);
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).brand()).isEqualTo(DEVICE_BRAND);
+        assertThat(result.get(1).brand()).isEqualTo(DEVICE_BRAND);
+        verify(deviceRepository, times(1)).findByBrand(DEVICE_BRAND);
+        verify(mapper, times(2)).toResponse(any(Device.class));
+    }
+
+    @Test
+    void getByBrand_ShouldCallMapperForEachDevice() {
+        // Given
+        UUID deviceIdTwo = UUID.randomUUID();
+        Device appleDeviceTwo = createAppleDevice(deviceIdTwo);
+        List<Device> devices = List.of(savedDevice, appleDeviceTwo);
+
+        when(deviceRepository.findByBrand(DEVICE_BRAND)).thenReturn(devices);
+        when(mapper.toResponse(any(Device.class))).thenReturn(expectedResponse);
+
+        // When
+        deviceService.getByBrand(DEVICE_BRAND);
+
+        // Then
+        verify(mapper, times(2)).toResponse(any(Device.class));
+        verify(mapper).toResponse(savedDevice);
+        verify(mapper).toResponse(appleDeviceTwo);
+    }
+
+    @Test
+    void getByState_ShouldReturnEmptyList_WhenNoStateDevicesExist() {
+        // Given
+        String state = "AVAILABLE";
+        when(deviceRepository.findByState(DeviceState.AVAILABLE)).thenReturn(Collections.emptyList());
+
+        // When
+        List<DeviceResponse> result = deviceService.getByState(state);
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(deviceRepository, times(1)).findByState(DeviceState.AVAILABLE);
+        verify(mapper, never()).toResponse(any());
+    }
+
+    @Test
+    void getByState_ShouldReturnMultipleDevices_WhenMultipleStateDevicesExist() {
+        // Given
+        String state = "AVAILABLE";
+        UUID deviceIdTwo = UUID.randomUUID();
+        Device deviceTwo = createSecondDevice(deviceIdTwo);
+        DeviceResponse responseTwo = createSecondDeviceResponse(deviceIdTwo);
+
+        List<Device> devices = List.of(savedDevice, deviceTwo);
+        when(deviceRepository.findByState(DeviceState.AVAILABLE)).thenReturn(devices);
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+        when(mapper.toResponse(deviceTwo)).thenReturn(responseTwo);
+
+        // When
+        List<DeviceResponse> result = deviceService.getByState(state);
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).state()).isEqualTo(DeviceState.AVAILABLE);
+        assertThat(result.get(1).state()).isEqualTo(DeviceState.AVAILABLE);
+        verify(deviceRepository, times(1)).findByState(DeviceState.AVAILABLE);
+        verify(mapper, times(2)).toResponse(any(Device.class));
+    }
+
+    @Test
+    void getByState_ShouldHandleLowercaseState() {
+        // Given
+        String state = "available";
+        List<Device> devices = List.of(savedDevice);
+        when(deviceRepository.findByState(DeviceState.AVAILABLE)).thenReturn(devices);
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+
+        // When
+        List<DeviceResponse> result = deviceService.getByState(state);
+
+        // Then
+        assertThat(result).hasSize(1);
+        verify(deviceRepository, times(1)).findByState(DeviceState.AVAILABLE);
+    }
+
+    @Test
+    void getByState_ShouldHandleMixedCaseState() {
+        // Given
+        String state = "AvAiLaBlE";
+        List<Device> devices = List.of(savedDevice);
+        when(deviceRepository.findByState(DeviceState.AVAILABLE)).thenReturn(devices);
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+
+        // When
+        List<DeviceResponse> result = deviceService.getByState(state);
+
+        // Then
+        assertThat(result).hasSize(1);
+        verify(deviceRepository, times(1)).findByState(DeviceState.AVAILABLE);
+    }
+
+    @Test
+    void getByState_ShouldThrowException_WhenInvalidStateProvided() {
+        // Given
+        String invalidState = "INVALID_STATE";
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> {
+            deviceService.getByState(invalidState);
+        });
+
+        verify(deviceRepository, never()).findByState(any());
+        verify(mapper, never()).toResponse(any());
+    }
+
+    @Test
+    void getByState_ShouldCallMapperForEachDevice() {
+        // Given
+        String state = "IN_USE";
+        UUID deviceIdTwo = UUID.randomUUID();
+        Device deviceTwo = createThirdDevice(deviceIdTwo);
+        List<Device> devices = List.of(deviceTwo);
+
+        when(deviceRepository.findByState(DeviceState.IN_USE)).thenReturn(devices);
+        when(mapper.toResponse(any(Device.class))).thenReturn(expectedResponse);
+
+        // When
+        deviceService.getByState(state);
+
+        // Then
+        verify(mapper, times(1)).toResponse(any(Device.class));
+        verify(mapper).toResponse(deviceTwo);
+    }
+
+    @Test
+    void getByBrandAndState_ShouldReturnMultipleDevices_WhenMultipleDevicesMatch() {
+        // Given
+        String brand = "Apple";
+        String state = "AVAILABLE";
+        UUID deviceIdTwo = UUID.randomUUID();
+        Device appleDeviceTwo = createAppleDevice(deviceIdTwo);
+        DeviceResponse responseTwo = createAppleDeviceResponse(deviceIdTwo);
+
+        List<Device> devices = List.of(savedDevice, appleDeviceTwo);
+        when(deviceRepository.findByBrandAndState(brand, DeviceState.AVAILABLE))
+                .thenReturn(devices);
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+        when(mapper.toResponse(appleDeviceTwo)).thenReturn(responseTwo);
+
+        // When
+        List<DeviceResponse> result = deviceService.getByBrandAndState(brand, state);
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).brand()).isEqualTo(brand);
+        assertThat(result.get(0).state()).isEqualTo(DeviceState.AVAILABLE);
+        assertThat(result.get(1).brand()).isEqualTo(brand);
+        assertThat(result.get(1).state()).isEqualTo(DeviceState.AVAILABLE);
+        verify(deviceRepository, times(1)).findByBrandAndState(brand, DeviceState.AVAILABLE);
+        verify(mapper, times(2)).toResponse(any(Device.class));
+    }
+
+    @Test
+    void getByBrandAndState_ShouldThrowException_WhenInvalidStateProvided() {
+        // Given
+        String brand = "Apple";
+        String invalidState = "INVALID_STATE";
+
+        // When & Then
+        assertThrows(IllegalArgumentException.class, () -> {
+            deviceService.getByBrandAndState(brand, invalidState);
+        });
+
+        verify(deviceRepository, never()).findByBrandAndState(any(), any());
+        verify(mapper, never()).toResponse(any());
+    }
+
+    @Test
+    void getByBrandAndState_ShouldHandleLowercaseState() {
+        // Given
+        String brand = "Apple";
+        String state = "available";
+        List<Device> devices = List.of(savedDevice);
+        when(deviceRepository.findByBrandAndState(brand, DeviceState.AVAILABLE))
+                .thenReturn(devices);
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+
+        // When
+        List<DeviceResponse> result = deviceService.getByBrandAndState(brand, state);
+
+        // Then
+        assertThat(result).hasSize(1);
+        verify(deviceRepository, times(1)).findByBrandAndState(brand, DeviceState.AVAILABLE);
+    }
+
     private DeviceCreateRequest createDeviceRequestWithState() {
         return new DeviceCreateRequest(DEVICE_NAME, DEVICE_BRAND, DEVICE_STATE);
     }
@@ -348,6 +568,27 @@ class DeviceServiceImplTest {
 
     private DeviceResponse createSecondDeviceResponse(UUID deviceTwo) {
         Device device = createSecondDevice(deviceTwo);
+        return new DeviceResponse(
+                device.getId(),
+                device.getName(),
+                device.getBrand(),
+                device.getState(),
+                device.getCreatedAt()
+        );
+    }
+
+    private Device createAppleDevice(UUID deviceId) {
+        Device device = new Device();
+        device.setId(deviceId);
+        device.setName("iPhone 14");
+        device.setBrand(DEVICE_BRAND);
+        device.setState(DeviceState.AVAILABLE);
+        device.setCreatedAt(Instant.now());
+        return device;
+    }
+
+    private DeviceResponse createAppleDeviceResponse(UUID deviceId) {
+        Device device = createAppleDevice(deviceId);
         return new DeviceResponse(
                 device.getId(),
                 device.getName(),
