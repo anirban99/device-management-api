@@ -15,6 +15,8 @@ import org.management.devices.mapper.DeviceMapper;
 import org.management.devices.repository.DeviceRepository;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -197,6 +199,85 @@ class DeviceServiceImplTest {
         ));
     }
 
+    @Test
+    void getAll_ShouldReturnEmptyList_WhenNoDevicesExist() {
+        // Given
+        when(deviceRepository.findAll()).thenReturn(Collections.emptyList());
+
+        // When
+        List<DeviceResponse> result = deviceService.getAll();
+
+        // Then
+        assertThat(result).isEmpty();
+        verify(deviceRepository, times(1)).findAll();
+        verify(mapper, never()).toResponse(any());
+    }
+
+    @Test
+    void getAll_ShouldReturnSingleDevice_WhenOneDeviceExists() {
+        // Given
+        List<Device> devices = List.of(savedDevice);
+        when(deviceRepository.findAll()).thenReturn(devices);
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+
+        // When
+        List<DeviceResponse> result = deviceService.getAll();
+
+        // Then
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo(DEVICE_ID);
+        assertThat(result.get(0).name()).isEqualTo(DEVICE_NAME);
+        assertThat(result.get(0).brand()).isEqualTo(DEVICE_BRAND);
+        assertThat(result.get(0).state()).isEqualTo(DEVICE_STATE);
+        verify(deviceRepository, times(1)).findAll();
+        verify(mapper, times(1)).toResponse(savedDevice);
+    }
+
+    @Test
+    void getAll_ShouldReturnMultipleDevices_WhenMultipleDevicesExist() {
+        // Given
+        UUID deviceIdTwo = UUID.randomUUID();
+        Device deviceTwo = createSecondDevice(deviceIdTwo);
+        DeviceResponse responseTwo = createSecondDeviceResponse(deviceIdTwo);
+
+        List<Device> devices = List.of(savedDevice, deviceTwo);
+        when(deviceRepository.findAll()).thenReturn(devices);
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+        when(mapper.toResponse(deviceTwo)).thenReturn(responseTwo);
+
+        // When
+        List<DeviceResponse> result = deviceService.getAll();
+
+        // Then
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).id()).isEqualTo(DEVICE_ID);
+        assertThat(result.get(1).id()).isEqualTo(deviceIdTwo);
+        verify(deviceRepository, times(1)).findAll();
+        verify(mapper, times(2)).toResponse(any(Device.class));
+    }
+
+    @Test
+    void getAll_ShouldCallMapperForEachDevice() {
+        // Given
+        UUID deviceIdTwo = UUID.randomUUID();
+        UUID deviceIdThree = UUID.randomUUID();
+        Device deviceTwo = createSecondDevice(deviceIdTwo);
+        Device deviceThree = createThirdDevice(deviceIdThree);
+
+        List<Device> devices = List.of(savedDevice, deviceTwo, deviceThree);
+        when(deviceRepository.findAll()).thenReturn(devices);
+        when(mapper.toResponse(any(Device.class))).thenReturn(expectedResponse);
+
+        // When
+        deviceService.getAll();
+
+        // Then
+        verify(mapper, times(3)).toResponse(any(Device.class));
+        verify(mapper).toResponse(savedDevice);
+        verify(mapper).toResponse(deviceTwo);
+        verify(mapper).toResponse(deviceThree);
+    }
+
     // Helper methods
     private DeviceCreateRequest createDeviceRequestWithState() {
         return new DeviceCreateRequest(DEVICE_NAME, DEVICE_BRAND, DEVICE_STATE);
@@ -243,5 +324,36 @@ class DeviceServiceImplTest {
 
     private DeviceResponse createExpectedResponse() {
         return new DeviceResponse(DEVICE_ID, DEVICE_NAME, DEVICE_BRAND, DEVICE_STATE, Instant.now());
+    }
+
+    private Device createSecondDevice(UUID deviceIdTwo) {
+        Device device = new Device();
+        device.setId(deviceIdTwo);
+        device.setName("Samsung Galaxy S24");
+        device.setBrand("Samsung");
+        device.setState(DeviceState.AVAILABLE);
+        device.setCreatedAt(Instant.now());
+        return device;
+    }
+
+    private Device createThirdDevice(UUID deviceIdThree) {
+        Device device = new Device();
+        device.setId(deviceIdThree);
+        device.setName("Google Pixel 8");
+        device.setBrand("Google");
+        device.setState(DeviceState.IN_USE);
+        device.setCreatedAt(Instant.now());
+        return device;
+    }
+
+    private DeviceResponse createSecondDeviceResponse(UUID deviceTwo) {
+        Device device = createSecondDevice(deviceTwo);
+        return new DeviceResponse(
+                device.getId(),
+                device.getName(),
+                device.getBrand(),
+                device.getState(),
+                device.getCreatedAt()
+        );
     }
 }

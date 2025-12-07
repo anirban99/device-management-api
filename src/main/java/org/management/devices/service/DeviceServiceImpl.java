@@ -10,6 +10,7 @@ import org.management.devices.repository.DeviceRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -30,6 +31,11 @@ public class DeviceServiceImpl implements DeviceService {
     @Override
     public DeviceResponse getById(UUID id) {
         return mapper.toResponse(find(id));
+    }
+
+    @Override
+    public List<DeviceResponse> getAll() {
+        return deviceRepository.findAll().stream().map(mapper::toResponse).toList();
     }
 
     private Device find(UUID id) {

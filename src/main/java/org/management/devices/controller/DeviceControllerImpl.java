@@ -1,7 +1,6 @@
 package org.management.devices.controller;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.management.devices.dto.DeviceCreateRequest;
 import org.management.devices.dto.DeviceResponse;
@@ -10,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -31,5 +31,12 @@ public class DeviceControllerImpl implements DeviceController { // <-- Implement
     @GetMapping("/{id}")
     public ResponseEntity<DeviceResponse> getById(@PathVariable UUID id) {
         return ResponseEntity.ok(deviceService.getById(id));
+    }
+
+    @Override
+    @GetMapping
+    public ResponseEntity<List<DeviceResponse>> getAll(@RequestParam(required = false) String brand,
+                                                       @RequestParam(required = false) String state) {
+        return ResponseEntity.ok(deviceService.getAll());
     }
 }
