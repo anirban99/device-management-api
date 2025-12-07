@@ -14,6 +14,7 @@ import org.management.devices.repository.DeviceRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -49,13 +50,27 @@ public class DeviceServiceImpl implements DeviceService {
 
     @Override
     public List<DeviceResponse> getByState(String state) {
-        DeviceState deviceState = DeviceState.valueOf(state.trim().toUpperCase());
+        DeviceState deviceState;
+        try {
+            deviceState = DeviceState.valueOf(state.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid state: " + state +
+                            ". Valid values: " + Arrays.toString(DeviceState.values())
+            );
+        }
         return deviceRepository.findByState(deviceState).stream().map(mapper::toResponse).toList();
     }
 
     @Override
     public List<DeviceResponse> getByBrandAndState(String brand, String state) {
-        DeviceState deviceState = DeviceState.valueOf(state.trim().toUpperCase());
+        DeviceState deviceState;
+        try {
+            deviceState = DeviceState.valueOf(state.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Invalid state: " + state +
+                    ". Valid values: " + Arrays.toString(DeviceState.values())
+            );
+        }
         return deviceRepository.findByBrandAndState(brand, deviceState).stream().map(mapper::toResponse).toList();
     }
 
