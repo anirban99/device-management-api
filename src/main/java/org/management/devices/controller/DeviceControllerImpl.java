@@ -21,7 +21,6 @@ public class DeviceControllerImpl implements DeviceController { // <-- Implement
 
     @Override
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
     public ResponseEntity<DeviceResponse> create(@Valid @RequestBody DeviceCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(deviceService.create(request));
@@ -45,5 +44,12 @@ public class DeviceControllerImpl implements DeviceController { // <-- Implement
         if (state != null && !state.isEmpty()) return ResponseEntity.ok(deviceService.getByState(state));
 
         return ResponseEntity.ok(deviceService.getAll());
+    }
+
+    @Override
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        deviceService.delete(id);
+        return ResponseEntity.noContent().build();
     }
 }

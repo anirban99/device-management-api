@@ -18,4 +18,6 @@ public interface DeviceService {
     List<DeviceResponse> getByState(String state);
 
     List<DeviceResponse> getByBrandAndState(String brand, String state);
+
+    void delete(UUID id);
 }

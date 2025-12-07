@@ -13,4 +13,6 @@ public interface DeviceController {
     ResponseEntity<DeviceResponse> getById(UUID id);
 
     ResponseEntity<List<DeviceResponse>> getAll(String brand, String state);
+
+    ResponseEntity<Void> delete(UUID id);
 }

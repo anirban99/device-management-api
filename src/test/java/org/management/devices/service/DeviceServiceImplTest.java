@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.management.devices.domain.DeviceState;
 import org.management.devices.dto.DeviceResponse;
+import org.management.devices.exception.DeviceDeletionException;
 import org.management.devices.exception.DeviceNotFoundException;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -497,6 +498,66 @@ class DeviceServiceImplTest {
         // Then
         assertThat(result).hasSize(1);
         verify(deviceRepository, times(1)).findByBrandAndState(brand, DeviceState.AVAILABLE);
+    }
+
+    @Test
+    void delete_ShouldDeleteDevice_WhenDeviceExistsAndNotInUse() {
+        // Given
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(savedDevice));
+
+        // When
+        deviceService.delete(DEVICE_ID);
+
+        // Then
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        verify(deviceRepository, times(1)).delete(savedDevice);
+    }
+
+    @Test
+    void delete_ShouldThrowDeviceDeletionException_WhenDeviceIsInUse() {
+        // Given
+        Device inUseDevice = createSavedDevice();
+        inUseDevice.setState(DeviceState.IN_USE);
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(inUseDevice));
+
+        // When & Then
+        DeviceDeletionException exception = assertThrows(DeviceDeletionException.class, () -> {
+            deviceService.delete(DEVICE_ID);
+        });
+
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        assertThat(exception.getMessage()).isEqualTo("Cannot delete device with ID " + DEVICE_ID + " because its state is IN_USE.");
+        verify(deviceRepository, never()).delete(any());
+    }
+
+    @Test
+    void delete_ShouldThrowDeviceNotFoundException_WhenDeviceDoesNotExist() {
+        // Given
+        UUID nonExistentId = UUID.randomUUID();
+        when(deviceRepository.findById(nonExistentId)).thenReturn(java.util.Optional.empty());
+
+        // When & Then
+        assertThrows(DeviceNotFoundException.class, () -> {
+            deviceService.delete(nonExistentId);
+        });
+
+        verify(deviceRepository, times(1)).findById(nonExistentId);
+        verify(deviceRepository, never()).delete(any());
+    }
+
+    @Test
+    void delete_ShouldDeleteDevice_WhenDeviceStateIsInactive() {
+        // Given
+        Device retiredDevice = createSavedDevice();
+        retiredDevice.setState(DeviceState.INACTIVE);
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(retiredDevice));
+
+        // When
+        deviceService.delete(DEVICE_ID);
+
+        // Then
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        verify(deviceRepository, times(1)).delete(retiredDevice);
     }
 
     private DeviceCreateRequest createDeviceRequestWithState() {

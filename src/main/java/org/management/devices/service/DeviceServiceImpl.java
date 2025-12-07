@@ -5,6 +5,7 @@ import org.management.devices.domain.Device;
 import org.management.devices.domain.DeviceState;
 import org.management.devices.dto.DeviceCreateRequest;
 import org.management.devices.dto.DeviceResponse;
+import org.management.devices.exception.DeviceDeletionException;
 import org.management.devices.exception.DeviceNotFoundException;
 import org.management.devices.mapper.DeviceMapper;
 import org.management.devices.repository.DeviceRepository;
@@ -54,6 +55,17 @@ public class DeviceServiceImpl implements DeviceService {
     public List<DeviceResponse> getByBrandAndState(String brand, String state) {
         DeviceState deviceState = DeviceState.valueOf(state.trim().toUpperCase());
         return deviceRepository.findByBrandAndState(brand, deviceState).stream().map(mapper::toResponse).toList();
+    }
+
+    @Override
+    public void delete(UUID id) {
+        Device device = find(id);
+
+        if (device.getState() == DeviceState.IN_USE) {
+            throw new DeviceDeletionException("Cannot delete device with ID " + id + " because its state is IN_USE.");
+        }
+
+        deviceRepository.delete(device);
     }
 
     private Device find(UUID id) {
