@@ -5,8 +5,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.management.devices.domain.DeviceState;
 import org.management.devices.dto.DeviceResponse;
+import org.management.devices.dto.DeviceUpdateRequest;
 import org.management.devices.exception.DeviceDeletionException;
 import org.management.devices.exception.DeviceNotFoundException;
+import org.management.devices.exception.DeviceUpdateValidationException;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -558,6 +560,248 @@ class DeviceServiceImplTest {
         // Then
         verify(deviceRepository, times(1)).findById(DEVICE_ID);
         verify(deviceRepository, times(1)).delete(retiredDevice);
+    }
+
+    @Test
+    void update_ShouldUpdateDevice_WhenAllFieldsProvidedAndDeviceNotInUse() {
+        // Given
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                "iPhone 16 Pro",
+                "Apple",
+                DeviceState.INACTIVE
+        );
+        Device updatedDevice = createSavedDevice();
+        updatedDevice.setName("iPhone 16 Pro");
+        updatedDevice.setState(DeviceState.INACTIVE);
+        DeviceResponse updatedResponse = new DeviceResponse(
+                DEVICE_ID,
+                "iPhone 16 Pro",
+                DEVICE_BRAND,
+                DeviceState.INACTIVE,
+                Instant.now()
+        );
+
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(savedDevice));
+        when(deviceRepository.save(any(Device.class))).thenReturn(updatedDevice);
+        when(mapper.toResponse(updatedDevice)).thenReturn(updatedResponse);
+
+        // When
+        DeviceResponse result = deviceService.update(DEVICE_ID, updateRequest);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.name()).isEqualTo("iPhone 16 Pro");
+        assertThat(result.state()).isEqualTo(DeviceState.INACTIVE);
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        verify(deviceRepository, times(1)).save(any(Device.class));
+        verify(mapper, times(1)).toResponse(updatedDevice);
+    }
+
+    @Test
+    void update_ShouldThrowException_WhenRequiredFieldsAreMissing() {
+        // Given - missing state field
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                "iPhone 16 Pro",
+                "Apple",
+                null
+        );
+
+        // When & Then
+        DeviceUpdateValidationException exception = assertThrows(DeviceUpdateValidationException.class, () -> {
+            deviceService.update(DEVICE_ID, updateRequest);
+        });
+
+        assertThat(exception.getMessage())
+                .isEqualTo("PUT request requires 'name', 'brand', and 'state' fields to be present.");
+        verify(deviceRepository, never()).findById(any());
+        verify(deviceRepository, never()).save(any());
+    }
+
+    @Test
+    void update_ShouldThrowException_WhenUpdatingNameOrBrandOfInUseDevice() {
+        // Given
+        Device inUseDevice = createSavedDevice();
+        inUseDevice.setState(DeviceState.IN_USE);
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                "iPhone 16 Pro", // Different name
+                DEVICE_BRAND,
+                DeviceState.IN_USE
+        );
+
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(inUseDevice));
+
+        // When & Then
+        DeviceUpdateValidationException exception = assertThrows(DeviceUpdateValidationException.class, () -> {
+            deviceService.update(DEVICE_ID, updateRequest);
+        });
+
+        assertThat(exception.getMessage())
+                .isEqualTo("Cannot update 'name' for device " + DEVICE_ID + " because its state is IN_USE.");
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        verify(deviceRepository, never()).save(any());
+    }
+
+    @Test
+    void update_ShouldAllowStateUpdate_WhenDeviceIsInUseButNameAndBrandUnchanged() {
+        // Given
+        Device inUseDevice = createSavedDevice();
+        inUseDevice.setState(DeviceState.IN_USE);
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                DEVICE_NAME, // Same name
+                DEVICE_BRAND, // Same brand
+                DeviceState.AVAILABLE // Different state
+        );
+        Device updatedDevice = createSavedDevice();
+        updatedDevice.setState(DeviceState.AVAILABLE);
+        DeviceResponse updatedResponse = new DeviceResponse(
+                DEVICE_ID,
+                DEVICE_NAME,
+                DEVICE_BRAND,
+                DeviceState.AVAILABLE,
+                Instant.now()
+        );
+
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(inUseDevice));
+        when(deviceRepository.save(any(Device.class))).thenReturn(updatedDevice);
+        when(mapper.toResponse(updatedDevice)).thenReturn(updatedResponse);
+
+        // When
+        DeviceResponse result = deviceService.update(DEVICE_ID, updateRequest);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.state()).isEqualTo(DeviceState.AVAILABLE);
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        verify(deviceRepository, times(1)).save(any(Device.class));
+        verify(mapper, times(1)).toResponse(updatedDevice);
+    }
+
+    @Test
+    void partialUpdate_ShouldUpdateOnlyProvidedFields_WhenDeviceNotInUse() {
+        // Given
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                null,
+                "Samsung",
+                null
+        );
+        Device updatedDevice = createSavedDevice();
+        updatedDevice.setBrand("Samsung");
+        DeviceResponse updatedResponse = new DeviceResponse(
+                DEVICE_ID,
+                DEVICE_NAME, // unchanged
+                "Samsung", // updated
+                DEVICE_STATE, // unchanged
+                Instant.now()
+        );
+
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(savedDevice));
+        when(deviceRepository.save(any(Device.class))).thenReturn(updatedDevice);
+        when(mapper.toResponse(updatedDevice)).thenReturn(updatedResponse);
+
+        // When
+        DeviceResponse result = deviceService.partialUpdate(DEVICE_ID, updateRequest);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.name()).isEqualTo(DEVICE_NAME); // unchanged
+        assertThat(result.brand()).isEqualTo("Samsung"); // updated
+        assertThat(result.state()).isEqualTo(DEVICE_STATE); // unchanged
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        verify(deviceRepository, times(1)).save(any(Device.class));
+    }
+
+    @Test
+    void partialUpdate_ShouldThrowException_WhenUpdatingNameOfInUseDevice() {
+        // Given
+        Device inUseDevice = createSavedDevice();
+        inUseDevice.setState(DeviceState.IN_USE);
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                "New Name", // trying to change name
+                null,
+                null
+        );
+
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(inUseDevice));
+
+        // When & Then
+        DeviceUpdateValidationException exception = assertThrows(DeviceUpdateValidationException.class, () -> {
+            deviceService.partialUpdate(DEVICE_ID, updateRequest);
+        });
+
+        assertThat(exception.getMessage())
+                .isEqualTo("Cannot update 'name' for device " + DEVICE_ID + " because its state is IN_USE.");
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        verify(deviceRepository, never()).save(any());
+    }
+
+    @Test
+    void partialUpdate_ShouldAllowStateUpdate_WhenDeviceIsInUse() {
+        // Given
+        Device inUseDevice = createSavedDevice();
+        inUseDevice.setState(DeviceState.IN_USE);
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                null, // not changing name
+                null, // not changing brand
+                DeviceState.AVAILABLE // only changing state
+        );
+        Device updatedDevice = createSavedDevice();
+        updatedDevice.setState(DeviceState.AVAILABLE);
+        DeviceResponse updatedResponse = new DeviceResponse(
+                DEVICE_ID,
+                DEVICE_NAME,
+                DEVICE_BRAND,
+                DeviceState.AVAILABLE,
+                Instant.now()
+        );
+
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(inUseDevice));
+        when(deviceRepository.save(any(Device.class))).thenReturn(updatedDevice);
+        when(mapper.toResponse(updatedDevice)).thenReturn(updatedResponse);
+
+        // When
+        DeviceResponse result = deviceService.partialUpdate(DEVICE_ID, updateRequest);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.state()).isEqualTo(DeviceState.AVAILABLE);
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        verify(deviceRepository, times(1)).save(any(Device.class));
+    }
+
+    @Test
+    void partialUpdate_ShouldAllowSameNameAndBrand_WhenDeviceIsInUse() {
+        // Given
+        Device inUseDevice = createSavedDevice();
+        inUseDevice.setState(DeviceState.IN_USE);
+        DeviceUpdateRequest updateRequest = new DeviceUpdateRequest(
+                DEVICE_NAME, // same name
+                DEVICE_BRAND, // same brand
+                DeviceState.INACTIVE // changing state
+        );
+        Device updatedDevice = createSavedDevice();
+        updatedDevice.setState(DeviceState.INACTIVE);
+        DeviceResponse updatedResponse = new DeviceResponse(
+                DEVICE_ID,
+                DEVICE_NAME,
+                DEVICE_BRAND,
+                DeviceState.INACTIVE,
+                Instant.now()
+        );
+
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(inUseDevice));
+        when(deviceRepository.save(any(Device.class))).thenReturn(updatedDevice);
+        when(mapper.toResponse(updatedDevice)).thenReturn(updatedResponse);
+
+        // When
+        DeviceResponse result = deviceService.partialUpdate(DEVICE_ID, updateRequest);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.name()).isEqualTo(DEVICE_NAME);
+        assertThat(result.brand()).isEqualTo(DEVICE_BRAND);
+        assertThat(result.state()).isEqualTo(DeviceState.INACTIVE);
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        verify(deviceRepository, times(1)).save(any(Device.class));
     }
 
     private DeviceCreateRequest createDeviceRequestWithState() {

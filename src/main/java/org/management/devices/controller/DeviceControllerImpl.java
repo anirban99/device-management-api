@@ -4,6 +4,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.management.devices.dto.DeviceCreateRequest;
 import org.management.devices.dto.DeviceResponse;
+import org.management.devices.dto.DeviceUpdateRequest;
 import org.management.devices.service.DeviceService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +45,18 @@ public class DeviceControllerImpl implements DeviceController { // <-- Implement
         if (state != null && !state.isEmpty()) return ResponseEntity.ok(deviceService.getByState(state));
 
         return ResponseEntity.ok(deviceService.getAll());
+    }
+
+    @Override
+    @PutMapping("/{id}")
+    public ResponseEntity<DeviceResponse> update(@PathVariable UUID id, @Valid @RequestBody DeviceUpdateRequest request) {
+        return ResponseEntity.ok(deviceService.update(id, request));
+    }
+
+    @Override
+    @PatchMapping("/{id}")
+    public ResponseEntity<DeviceResponse> partialUpdate(@PathVariable UUID id, @Valid @RequestBody DeviceUpdateRequest request) {
+        return ResponseEntity.ok(deviceService.partialUpdate(id, request));
     }
 
     @Override

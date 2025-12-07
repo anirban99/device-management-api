@@ -5,8 +5,10 @@ import org.management.devices.domain.Device;
 import org.management.devices.domain.DeviceState;
 import org.management.devices.dto.DeviceCreateRequest;
 import org.management.devices.dto.DeviceResponse;
+import org.management.devices.dto.DeviceUpdateRequest;
 import org.management.devices.exception.DeviceDeletionException;
 import org.management.devices.exception.DeviceNotFoundException;
+import org.management.devices.exception.DeviceUpdateValidationException;
 import org.management.devices.mapper.DeviceMapper;
 import org.management.devices.repository.DeviceRepository;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -55,6 +57,62 @@ public class DeviceServiceImpl implements DeviceService {
     public List<DeviceResponse> getByBrandAndState(String brand, String state) {
         DeviceState deviceState = DeviceState.valueOf(state.trim().toUpperCase());
         return deviceRepository.findByBrandAndState(brand, deviceState).stream().map(mapper::toResponse).toList();
+    }
+
+    @Override
+    public DeviceResponse update(UUID id, DeviceUpdateRequest deviceUpdateRequest) {
+        if (deviceUpdateRequest.name() == null || deviceUpdateRequest.brand() == null || deviceUpdateRequest.state() == null) {
+            throw new DeviceUpdateValidationException("PUT request requires 'name', 'brand', and 'state' fields to be present.");
+        }
+
+        Device existingDevice = find(id);
+
+        boolean isDeviceInUse = existingDevice.getState() == DeviceState.IN_USE;
+
+        if (isDeviceInUse) {
+            if (!deviceUpdateRequest.name().equals(existingDevice.getName())) {
+                throw new DeviceUpdateValidationException("Cannot update 'name' for device " + id + " because its state is IN_USE.");
+            }
+            if (!deviceUpdateRequest.brand().equals(existingDevice.getBrand())) {
+                throw new DeviceUpdateValidationException("Cannot update 'brand' for device " + id + " because its state is IN_USE.");
+            }
+        }
+
+        existingDevice.setName(deviceUpdateRequest.name());
+        existingDevice.setBrand(deviceUpdateRequest.brand());
+        existingDevice.setState(deviceUpdateRequest.state());
+
+        return mapper.toResponse(deviceRepository.save(existingDevice));
+    }
+
+    @Override
+    public DeviceResponse partialUpdate(UUID id, DeviceUpdateRequest deviceUpdateRequest) {
+        Device existingDevice = find(id);
+
+        boolean isDeviceInUse = existingDevice.getState() == DeviceState.IN_USE;
+
+        if (isDeviceInUse) {
+            if (deviceUpdateRequest.name() != null && !deviceUpdateRequest.name().equals(existingDevice.getName())) {
+                throw new DeviceUpdateValidationException("Cannot update 'name' for device " + id + " because its state is IN_USE.");
+            }
+            if (deviceUpdateRequest.brand() != null && !deviceUpdateRequest.brand().equals(existingDevice.getBrand())) {
+                throw new DeviceUpdateValidationException("Cannot update 'brand' for device " + id + " because its state is IN_USE.");
+            }
+        }
+
+        if (deviceUpdateRequest.name() != null) {
+            existingDevice.setName(deviceUpdateRequest.name());
+        }
+
+        if (deviceUpdateRequest.brand() != null) {
+            existingDevice.setBrand(deviceUpdateRequest.brand());
+        }
+
+        if (deviceUpdateRequest.state() != null) {
+            existingDevice.setState(deviceUpdateRequest.state());
+        }
+
+        return mapper.toResponse(deviceRepository.save(existingDevice));
     }
 
     @Override
