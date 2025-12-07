@@ -4,20 +4,36 @@ import lombok.RequiredArgsConstructor;
 import org.management.devices.domain.Device;
 import org.management.devices.dto.DeviceCreateRequest;
 import org.management.devices.dto.DeviceResponse;
+import org.management.devices.exception.DeviceNotFoundException;
 import org.management.devices.mapper.DeviceMapper;
 import org.management.devices.repository.DeviceRepository;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class DeviceServiceImpl implements DeviceService {
 
     private final DeviceRepository deviceRepository;
+
+    @Qualifier("deviceMapperImpl")
     private final DeviceMapper mapper;
 
     @Override
     public DeviceResponse create(DeviceCreateRequest request) {
         Device device = mapper.toEntity(request);
         return mapper.toResponse(deviceRepository.save(device));
+    }
+
+    @Override
+    public DeviceResponse getById(UUID id) {
+        return mapper.toResponse(find(id));
+    }
+
+    private Device find(UUID id) {
+        return deviceRepository.findById(id)
+                .orElseThrow(() -> new DeviceNotFoundException("Device not found with id: " + id));
     }
 }

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.management.devices.domain.DeviceState;
 import org.management.devices.dto.DeviceResponse;
+import org.management.devices.exception.DeviceNotFoundException;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -17,6 +18,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -128,6 +130,71 @@ class DeviceServiceImplTest {
         assertThat(result.state()).isEqualTo(DeviceState.AVAILABLE);
         verify(mapper).toEntity(request);
         verify(deviceRepository).save(device);
+    }
+
+    @Test
+    void getById_ShouldReturnDeviceResponse_WhenDeviceExists() {
+        // Given
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(savedDevice));
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+
+        // When
+        DeviceResponse result = deviceService.getById(DEVICE_ID);
+
+        // Then
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(DEVICE_ID);
+        assertThat(result.name()).isEqualTo(DEVICE_NAME);
+        assertThat(result.brand()).isEqualTo(DEVICE_BRAND);
+        assertThat(result.state()).isEqualTo(DEVICE_STATE);
+        verify(deviceRepository, times(1)).findById(DEVICE_ID);
+        verify(mapper, times(1)).toResponse(savedDevice);
+    }
+
+    @Test
+    void getById_ShouldThrowDeviceNotFoundException_WhenDeviceNotFound() {
+        // Given
+        UUID nonExistentId = UUID.randomUUID();
+        when(deviceRepository.findById(nonExistentId)).thenReturn(java.util.Optional.empty());
+
+        // When & Then
+        assertThrows(DeviceNotFoundException.class, () -> {
+            deviceService.getById(nonExistentId);
+        });
+
+        verify(deviceRepository, times(1)).findById(nonExistentId);
+        verify(mapper, never()).toResponse(any());
+    }
+
+    @Test
+    void getById_ShouldCallRepositoryFindById_WithCorrectId() {
+        // Given
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(savedDevice));
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+
+        // When
+        deviceService.getById(DEVICE_ID);
+
+        // Then
+        verify(deviceRepository).findById(DEVICE_ID);
+    }
+
+    @Test
+    void getById_ShouldCallMapperToResponse_WithFoundDevice() {
+        // Given
+        when(deviceRepository.findById(DEVICE_ID)).thenReturn(java.util.Optional.of(savedDevice));
+        when(mapper.toResponse(savedDevice)).thenReturn(expectedResponse);
+
+        // When
+        deviceService.getById(DEVICE_ID);
+
+        // Then
+        verify(mapper).toResponse(argThat(d ->
+                d.getId().equals(DEVICE_ID) &&
+                        d.getName().equals(DEVICE_NAME) &&
+                        d.getBrand().equals(DEVICE_BRAND) &&
+                        d.getState().equals(DEVICE_STATE)
+        ));
     }
 
     // Helper methods
