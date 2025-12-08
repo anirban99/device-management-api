@@ -8,7 +8,7 @@ public record DeviceCreateRequest(
         String name,
         @NotBlank(message = "Brand is required")
         String brand,
-        @ValidDeviceState
+        @ValidDeviceState(allowNull = true)
         DeviceState state
 ) {}
 
