@@ -16,7 +16,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/devices")
 @RequiredArgsConstructor
-public class DeviceControllerImpl implements DeviceController { // <-- Implements the contract
+public class DeviceControllerImpl implements DeviceController {
 
     private final DeviceService deviceService;
 

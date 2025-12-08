@@ -1,6 +1,5 @@
 package org.management.devices.service;
 
-import org.management.devices.domain.Device;
 import org.management.devices.dto.DeviceCreateRequest;
 import org.management.devices.dto.DeviceResponse;
 import org.management.devices.dto.DeviceUpdateRequest;

@@ -1,4 +1,4 @@
-package org.management.devices.service;
+package org.management.devices.service.unit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -9,6 +9,7 @@ import org.management.devices.dto.DeviceUpdateRequest;
 import org.management.devices.exception.DeviceDeletionException;
 import org.management.devices.exception.DeviceNotFoundException;
 import org.management.devices.exception.DeviceUpdateValidationException;
+import org.management.devices.service.DeviceServiceImpl;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -28,7 +29,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class DeviceServiceImplTest {
+class DeviceServiceUnitTest {
 
     private static final UUID DEVICE_ID = UUID.randomUUID();
     private static final String DEVICE_NAME = "iPhone 15";
