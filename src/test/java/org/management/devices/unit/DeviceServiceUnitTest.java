@@ -1,4 +1,4 @@
-package org.management.devices.service.unit;
+package org.management.devices.unit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

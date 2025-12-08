@@ -1,4 +1,4 @@
-package org.management.devices.service.integration;
+package org.management.devices.integration;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
