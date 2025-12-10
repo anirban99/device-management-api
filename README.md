@@ -44,11 +44,9 @@ These instructions cover how to build, run, and interact with the application lo
 
 ### **Clone the repository**
 
-The repository can be found here: https://github.com/anirban99/device-management-api#
-
 ``` sh
 git clone git@github.com:anirban99/device-management-api.git
-cd devices-api
+cd device-management-api
 ```
 
 ##  **Build Instructions**
